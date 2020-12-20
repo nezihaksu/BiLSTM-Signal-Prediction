@@ -82,13 +82,45 @@ dataOut_filter = run_butter_filter(data_input, lowcut, highcut, fs, order)
 
 ##### Reduction Of abnormality in signal by superposition of moving averages and normalization
 
-data_length = len(dataOut_filter)
 filter_order = 8
 out_moving_filter = moving_avarage_filter(dataOut_filter, filter_order)
 out_mf1 = dataOut_filter[0:len(dataOut_filter)-3] - out_moving_filter[3:len(dataOut_filter)]
 
 out_mf11 = np.subtract(out_mf1,np.mean(out_mf1))
 out_mf111 = np.true_divide(out_mf11,np.sqrt(np.var(out_mf11,ddof=1)))
+
+data_length = len(dataOut_filter)
+segmentation_length = 100
+filter_order = 8
+segments_numbers = math.floor(data_length / segmentation_length)
+temp = np.subtract(dataOut_filter, np.mean(dataOut_filter))
+temp1 = np.reshape(temp[0:segments_numbers * segmentation_length], (segments_numbers,segmentation_length))
+
+out_moving_filter = np.zeros((segments_numbers,segmentation_length))
+temp11 = np.zeros((segments_numbers,segmentation_length))
+for i in range(1, segments_numbers):
+
+
+     out_moving_filter[i, :] = moving_avarage_filter(temp1[i,:], filter_order)
+
+var_segmentation = []
+for element in out_moving_filter:
+    var_segmentation.append(np.var(element,ddof=1)/10)
+
+for i in range(1,segments_numbers):
+    temp11[i,:] = temp1[i,:]/var_segmentation[i]
+
+dataOut = temp11.flatten()
+
+fs = 100.0
+lowcut = 1.0
+highcut = 9.0
+order = 4
+dataOut_filter = run_butter_filter(dataOut, lowcut, highcut, fs, order)
+
+dataOut = np.subtract(dataOut_filter,np.mean(dataOut_filter))
+dataOut = np.true_divide(dataOut,np.sqrt(np.var(dataOut,ddof=1)))
+
 
 # plt.plot(out_mf111)
 # plt.show()
