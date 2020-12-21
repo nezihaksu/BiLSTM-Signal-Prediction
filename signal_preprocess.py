@@ -1,13 +1,11 @@
-import numpy
 from scipy.signal import butter, lfilter
 import math
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import itertools
 
 label = pd.read_csv(r"C:\Users\nezih\Desktop\hw3\sensor-27minutes.csv")
-data_input = label.iloc[:, 1].values
+data_input = label.iloc[:120_000, 1].values
 
 
 def butter_bandpass(lowcut, highcut, fs, order):
@@ -34,11 +32,10 @@ def moving_avarage_filter(x, order):
     b = (1 / order) * np.ones((order, 1))
     y = lfilter(b.flatten(), 1.0, x.flatten())
     return y
-
 def segmentation_fn(temp,seg_sample_num,seg_nember):
     y = []
     for x in range(seg_nember):
-        thr = np.var(temp[x, :], ddof=1) * 0.8
+        thr = np.var(temp[x, :], ddof=1) * 0.7
         indices = [0, seg_sample_num - 2]
         a = 0
         b = 1
@@ -63,7 +60,7 @@ def segmentation_fn(temp,seg_sample_num,seg_nember):
             sort_index = []
             for x in var_bin:
                 sort_index.append(x[1])
-            index_flip = numpy.flip(sort_index)
+            index_flip = np.flip(sort_index)
             new_idx = index_flip[0:bin_length]
             new_idx1 = []
             for w in range(len(new_idx)):
@@ -72,7 +69,7 @@ def segmentation_fn(temp,seg_sample_num,seg_nember):
             y.append(new_idx1)
     return y
 
-            ##### butherworth bandpass filtering###
+##### butherworth bandpass filtering###
 
 fs = 100.0
 lowcut = 1.0
@@ -122,20 +119,15 @@ dataOut = np.subtract(dataOut_filter,np.mean(dataOut_filter))
 dataOut = np.true_divide(dataOut,np.sqrt(np.var(dataOut,ddof=1)))
 
 
-# plt.plot(out_mf111)
-# plt.show()
-
 ##### adaptive segmentations
 
 bins_num = 1200#len()
 bin_length = 16
 seg_nember = math.floor(bins_num / bin_length)
-seg_sample_num = math.floor(len(out_mf111)/seg_nember)
-temp = np.reshape(out_mf111[0:seg_nember*seg_sample_num],(seg_nember,seg_sample_num))
+seg_sample_num = math.floor(len(dataOut)/seg_nember)
+temp = np.reshape(dataOut[0:seg_nember*seg_sample_num],(seg_nember,seg_sample_num))
 bin_arrange = []
 bin_arrange = segmentation_fn(temp,seg_sample_num,seg_nember)
-
-import itertools
 
 id_list = []
 id_samples = []
@@ -150,14 +142,13 @@ for x in range(seg_nember):
         r= temp1[y]
         num = num + 1
 
+i = 1
+
+
+#### deep learning Algorithm
 
 id_list_flatten = list(itertools.chain(*id_list))
 id_samples_flatten = list(itertools.chain(*id_samples))
 
-df = pd.DataFrame(id_samples_flatten)
-df["id"] = id_list_flatten
-print(df)
-
-
-
-#### deep learning Algorithm
+print(len(id_list_flatten))
+print(len(id_list_flatten))
