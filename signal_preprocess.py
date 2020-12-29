@@ -4,20 +4,34 @@ import numpy as np
 import pandas as pd
 import itertools
 
-raw_value = pd.read_csv(r"C:\Users\nezih\Desktop\hw3\sensor-27minutes.csv")
-targets = pd.read_excel(r"C:\Users\nezih\Desktop\hw3\label-27minutes.xlsx")
-wb = xlrd.open_workbook(r"C:\Users\nezih\Desktop\hw3\label-27minutes.xlsx")
-sheet = wb.sheet_by_index(0)
 
-train_start_hour = 12
-train_start_minute = 19
-train_end_hour = 12
-train_end_minute = 39
+raw_value = pd.read_csv(r"C:\Users\nezih\Desktop\hw3\sensor1104-6e22.csv")
+targets = pd.read_excel(r"C:\Users\nezih\Desktop\hw3\label1104-6e22.xlsx")
 
-test_start_hour = 12
-test_start_minute = 39
-test_end_hour = 12
-test_end_minute = 46
+train_start_hour = "12"
+train_start_minute = "21"
+train_end_hour = "12"
+train_end_minute = "23"
+
+test_start_hour = "12"
+test_start_minute = "36"
+test_end_hour = "12"
+test_end_minute = "39"
+
+start_time = "12:19"
+end_time = "12:40"
+
+targets_start_index = targets[targets["Time"].astype(str).str.contains(start_time)].iloc[0, :].name
+targets_end_index = targets[targets["Time"].astype(str).str.contains(end_time)].iloc[0, :].name
+
+start_time_new = "13:15"
+end_time_new = "13:40"
+
+raw_value_start_index = raw_value[raw_value.Time.str.contains(start_time_new)].iloc[0, :].name
+raw_value_end_index = raw_value[raw_value.Time.str.contains(end_time_new)].iloc[0, :].name
+
+print(targets_start_index)
+print(targets_end_index)
 
 
 class signal_processing:
@@ -50,7 +64,7 @@ class signal_processing:
     def segmentation_fn(self, temp, seg_sample_num, seg_nember, bin_length):
         y = []
         for x in range(seg_nember):
-            thr = np.var(temp[x, :], ddof=1) * 0.7
+            thr = np.var(temp[x, :], ddof=1) * 0.09
             indices = [1, seg_sample_num - 2]
             a = 0
             b = 1
@@ -83,13 +97,12 @@ class signal_processing:
                 new_idx1.sort()
                 y.append(new_idx1)
             else:
-                l = math.floor(seg_sample_num / 15)
+                l = math.floor(seg_sample_num / (bin_length - 1))
                 d = []
-                for i in range(15):
-                    d.append([i * l])
+                for i in range(bin_length - 1):
+                    d.append(i * l + 1)
                 y.append(d)
         return y
-
     def signalProcessingFun(self):
         ##### butherworth bandpass filtering###
 
@@ -128,17 +141,16 @@ class signal_processing:
         ##### adaptive segmentations
 
         bins_num = self.id_number
-        bin_length = 16
-        seg_nember = math.floor(bins_num / bin_length)
-        seg_sample_num = math.floor(len(dataOut) / seg_nember)
-        temp = np.reshape(dataOut[0:seg_nember * seg_sample_num], (seg_nember, seg_sample_num))
+        bin_length = 4
+        seg_sample_num = math.floor(len(dataOut) / bins_num)
+        temp = np.reshape(dataOut[0:bins_num * seg_sample_num], (bins_num, seg_sample_num))
         bin_arrange = []
-        bin_arrange = self.segmentation_fn(temp, seg_sample_num, seg_nember, bin_length)
+        bin_arrange = self.segmentation_fn(temp, seg_sample_num, bins_num, bin_length)
 
         id_list = []
         id_samples = []
         num = 0
-        for x in range(seg_nember):
+        for x in range(bins_num):
             temp1 = bin_arrange[x]
             temp11 = temp[x, :]
             r = 0
@@ -152,40 +164,31 @@ class signal_processing:
                     r = temp1[y]
                 num = num + 1
 
-        return seg_nember*bin_length,id_list, id_samples
-
-def label_filtering():
-    y = []
-    # for i in range(sheet.nrows):
-    #     if sheet.cell_value(i, 5) == 0 or sheet.cell_value(i, 5) == nan:
-    #         y.append(i)
-    return y
+        return bins_num, id_list, id_samples, seg_sample_num, bin_length
 
 def preprocess(raw_scg, start_hour, start_min, end_hour, end_min):
-
     start_time = "{}:{}".format(start_hour, start_min)
     end_time = "{}:{}".format(end_hour, end_min)
-
-    targets_start_index = targets[targets["Raw Time"].astype(str).str.contains(start_time)].iloc[0, :].name
-    targets_end_index = targets[targets["Raw Time"].astype(str).str.contains(end_time)].iloc[0, :].name
+    start_time  = "12:19"
 
     id_number = targets_end_index - targets_start_index
-    raw_value_start_index = raw_value[raw_value.Time.str.contains(start_time)].iloc[0, :].name
-    raw_value_end_index = raw_value[raw_value.Time.str.contains(end_time)].iloc[0, :].name - 1
     raw_scg_value = raw_scg.iloc[raw_value_start_index:raw_value_end_index, 1].values
 
     preprocessed_scg = signal_processing(raw_scg_value, id_number)
-    new_id_number, id_list, id_samples = preprocessed_scg.signalProcessingFun()
+    new_id_number, id_list, id_samples, sample_size, bin_length = preprocessed_scg.signalProcessingFun()
 
     id_list_flatten = list(itertools.chain(*id_list))
-    distinct_id_list = set(id_list_flatten)
-    print("NUMBER OF DISTINCT IDS")
-    print(len(distinct_id_list))
     id_samples_flatten = list(itertools.chain(*id_samples))
 
     df = pd.DataFrame(id_samples_flatten)
     df["id"] = id_list_flatten
     respected_time = raw_value.Time[0:len(id_samples_flatten)]
-    df['time'] = respected_time
+    new_time = []
+    seg = new_id_number
+    for x in range(seg):
+        for y in range(sample_size):
+            new_time.append(raw_value.Time[x * sample_size + y])
 
-    return new_id_number,df.dropna(axis=0)
+    df['time'] = np.array(new_time)
+
+    return new_id_number, bin_length,targets_start_index, df.dropna(axis=0)
