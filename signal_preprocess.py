@@ -192,3 +192,60 @@ def preprocess(raw_scg, start_hour, start_min, end_hour, end_min):
     df['time'] = np.array(new_time)
 
     return new_id_number, bin_length,targets_start_index, df.dropna(axis=0)
+
+def data_segmenation_normalization(data):
+
+    df = data
+    column_indices = {name: i for i, name in enumerate(df.columns)}
+    n = len(df)
+    train_df = df[0:int(n * 0.7)] ##70% training Data
+    val_df = df[int(n * 0.7):int(n * 0.9)] #20% test data
+    test_df = df[int(n * 0.9):] #10% predicting data
+
+    num_features = df.shape[1]
+
+    train_mean = train_df.mean()
+    train_std = train_df.std()
+    # Normalization
+    train_df = (train_df - train_mean) / train_std
+    val_df = (val_df - train_mean) / train_std
+    test_df = (test_df - train_mean) / train_std
+    return train_df,val_df,test_df
+
+features = ['0__change_quantiles__f_agg_"mean"__isabs_False__qh_0.8__ql_0.6',
+            '0__change_quantiles__f_agg_"var"__isabs_False__qh_0.8__ql_0.6',
+            '0__change_quantiles__f_agg_"mean"__isabs_True__qh_0.8__ql_0.6',
+            '0__change_quantiles__f_agg_"var"__isabs_True__qh_0.8__ql_0.6',
+            '0__change_quantiles__f_agg_"mean"__isabs_False__qh_1.0__ql_0.6',
+            '0__change_quantiles__f_agg_"var"__isabs_False__qh_1.0__ql_0.6',
+            '0__change_quantiles__f_agg_"mean"__isabs_True__qh_1.0__ql_0.6',
+            '0__change_quantiles__f_agg_"var"__isabs_True__qh_1.0__ql_0.6',
+            '0__quantile__q_0.1', '0__quantile__q_0.2',
+            '0__quantile__q_0.3', '0__quantile__q_0.4', '0__quantile__q_0.6', '0__quantile__q_0.7',
+            '0__quantile__q_0.8', '0__quantile__q_0.9', '0__percentage_of_reoccurring_values_to_all_values',
+            '0__percentage_of_reoccurring_datapoints_to_all_datapoints', '0__sum_of_reoccurring_values',
+            '0__sum_of_reoccurring_data_points', '0__ratio_value_number_to_time_series_length',
+            '0__time_reversal_asymmetry_statistic__lag_2', '0__time_reversal_asymmetry_statistic__lag_3',
+            '0__c3__lag_1', '0__c3__lag_2', '0__c3__lag_3', '0__maximum', '0__minimum']
+
+label_names = ["S","D","H","R"]
+
+def train_test_df(df, targets, targets_start_index, targets_end_index):
+    targets = targets[targets_start_index:targets_end_index].reset_index()
+    df[label_names] = targets[label_names]
+    return df
+
+# Processing first 20 min of raw scg signal and creating dataset with adaptive indexes and corresponding time row to extract features according to them.
+# Arguments are in order:start_hour,start_min,end_hour,end_min
+new_id_number_train,train_df = preprocess(raw_value, train_start_hour, train_start_minute, train_end_hour, train_end_minute)
+print("TRAIN DF LEN")
+print(len(train_df))
+print("TRAIN_DF ID NUMBER")
+print(new_id_number_train)
+
+# Processing last 7 minutes of raw scg signal to predict future parameters.
+new_id_number_test,test_df = preprocess(raw_value, test_start_hour, test_start_minute, test_end_hour, test_end_minute)
+print("TEST DF LEN")
+print(len(test_df))
+print("TEST_DF ID NUMBER")
+print(new_id_number_test)
