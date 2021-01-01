@@ -249,3 +249,57 @@ print("TEST DF LEN")
 print(len(test_df))
 print("TEST_DF ID NUMBER")
 print(new_id_number_test)
+
+def label_modification_df(targets, targets_start_index, targets_end_index, bin_number):
+    targets = targets[targets_start_index:targets_end_index].reset_index()
+    S = []
+    D = []
+    H = []
+    R = []
+
+    for x in targets.S:
+        for y in range(bin_number):
+            S.append(x)
+
+    for x in targets.D:
+        for y in range(bin_number):
+            D.append(x)
+
+    for x in targets.H:
+        for y in range(bin_number):
+            H.append(x)
+
+    for x in targets.R:
+        for y in range(bin_number):
+            R.append(x)
+
+
+
+    return S,D,H,R
+
+
+def data_normalization(data):
+
+    df = data
+    df_mean = df.mean()
+    df_std = df.std()
+
+    #Normalization
+    df = (df-df_mean)/df_std
+
+    return df
+
+# Processing first 20 min of raw scg signal and creating dataset with adaptive indexes and corresponding time row to extract features according to them.
+# Arguments are in order:start_hour,start_min,end_hour,end_min
+new_id_number_train, bin_length_train, train_df= preprocess(raw_value, train_start_hour, train_start_minute, train_end_hour, train_end_minute)
+
+# Processing last 7 minutes of raw scg signal to predict future parameters.
+new_id_number_test, bin_length_test, test_df = preprocess(raw_value, test_start_hour, test_start_minute, test_end_hour, test_end_minute)
+
+
+#Because of problems occuring while parallel processing i had to set n_jobs = 0,it calculates slower but works fine.
+train_extracted_features = extract_features(train_df, column_id="id", column_sort="time",
+                                         default_fc_parameters=EfficientFCParameters(), n_jobs=0)
+test_extracted_features = extract_features(test_df, column_id="id", column_sort="time",
+                                          default_fc_parameters=EfficientFCParameters(), n_jobs=0)
+
