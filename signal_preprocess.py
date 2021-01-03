@@ -1,37 +1,39 @@
 from scipy.signal import butter, lfilter
 import math
+import numpy
 import numpy as np
 import pandas as pd
-import itertools
 
+from matplotlib import pyplot as plt
+import itertools
+import time
+
+from tsfresh.feature_extraction import extract_features
+from tsfresh.feature_extraction import EfficientFCParameters
+
+import os
+import xlrd
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import tensorflow as tf
 
 raw_value = pd.read_csv(r"C:\Users\nezih\Desktop\hw3\sensor1104-6e22.csv")
 targets = pd.read_excel(r"C:\Users\nezih\Desktop\hw3\label1104-6e22.xlsx")
 
-train_start_hour = "12"
-train_start_minute = "21"
-train_end_hour = "12"
-train_end_minute = "23"
+print(raw_value)
+print(targets)
 
-test_start_hour = "12"
-test_start_minute = "36"
-test_end_hour = "12"
-test_end_minute = "39"
+train_start_hour = "13"
+train_start_minute = "15"
+train_end_hour = "13"
+train_end_minute = "30"
 
-start_time = "12:19"
-end_time = "12:40"
+test_start_hour = "13"
+test_start_minute = "31"
+test_end_hour = "13"
+test_end_minute = "43"
 
-targets_start_index = targets[targets["Time"].astype(str).str.contains(start_time)].iloc[0, :].name
-targets_end_index = targets[targets["Time"].astype(str).str.contains(end_time)].iloc[0, :].name
 
-start_time_new = "13:15"
-end_time_new = "13:40"
-
-raw_value_start_index = raw_value[raw_value.Time.str.contains(start_time_new)].iloc[0, :].name
-raw_value_end_index = raw_value[raw_value.Time.str.contains(end_time_new)].iloc[0, :].name
-
-print(targets_start_index)
-print(targets_end_index)
 
 
 class signal_processing:
@@ -103,6 +105,7 @@ class signal_processing:
                     d.append(i * l + 1)
                 y.append(d)
         return y
+
     def signalProcessingFun(self):
         ##### butherworth bandpass filtering###
 
@@ -166,12 +169,20 @@ class signal_processing:
 
         return bins_num, id_list, id_samples, seg_sample_num, bin_length
 
+
 def preprocess(raw_scg, start_hour, start_min, end_hour, end_min):
     start_time = "{}:{}".format(start_hour, start_min)
     end_time = "{}:{}".format(end_hour, end_min)
-    start_time  = "12:19"
+
+    print(start_time)
+    print(end_min)
+
+    targets_start_index = targets[targets["Time"].astype(str).str.contains(start_time)].iloc[0, :].name
+    targets_end_index = targets[targets["Time"].astype(str).str.contains(end_time)].iloc[0, :].name
 
     id_number = targets_end_index - targets_start_index
+    raw_value_start_index = raw_value[raw_value.Time.str.contains(start_time)].iloc[0, :].name
+    raw_value_end_index = raw_value[raw_value.Time.str.contains(end_time)].iloc[0, :].name - 1
     raw_scg_value = raw_scg.iloc[raw_value_start_index:raw_value_end_index, 1].values
 
     preprocessed_scg = signal_processing(raw_scg_value, id_number)
@@ -193,24 +204,55 @@ def preprocess(raw_scg, start_hour, start_min, end_hour, end_min):
 
     return new_id_number, bin_length,targets_start_index, df.dropna(axis=0)
 
-def data_segmenation_normalization(data):
 
+def data_segmenation_normalization(data):
     df = data
     column_indices = {name: i for i, name in enumerate(df.columns)}
     n = len(df)
-    train_df = df[0:int(n * 0.7)] ##70% training Data
-    val_df = df[int(n * 0.7):int(n * 0.9)] #20% test data
-    test_df = df[int(n * 0.9):] #10% predicting data
+    train_df = df[0:int(n * 0.7)]  ##70% training Data
+    val_df = df[int(n * 0.7):int(n * 0.9)]  # 20% test data
+    test_df = df[int(n * 0.9):]  # 10% predicting data
 
     num_features = df.shape[1]
-
     train_mean = train_df.mean()
     train_std = train_df.std()
     # Normalization
     train_df = (train_df - train_mean) / train_std
     val_df = (val_df - train_mean) / train_std
     test_df = (test_df - train_mean) / train_std
-    return train_df,val_df,test_df
+    return train_df, val_df, test_df
+
+
+def data_segmenation_normalization1(data):
+    df = data
+    column_indices = {name: i for i, name in enumerate(df.columns)}
+    n = len(df)
+    train_df = df[0:int(n * 0.7)]  ##70% training Data
+
+    num_features = df.shape[1]
+    train_mean = train_df.mean()
+    train_std = train_df.std()
+    # Normalization
+    new_data = (data - train_mean) / train_std
+
+    return new_data
+
+
+def data_shaping(data, S, D, H, R):
+    data["S"] = np.array(S)
+    data["D"] = np.array(D)
+    data["H"] = np.array(H)
+    data["R"] = np.array(R)
+
+    df = data
+    column_indices = {name: i for i, name in enumerate(df.columns)}
+    n = len(df)
+    train_df = df[0:int(n * 0.7)]  ##70% training Data
+    val_df = df[int(n * 0.7):int(n * 0.9)]  # 20% test data
+    test_df = df[int(n * 0.9):]  # 10% predicting data
+
+    return train_df, val_df, test_df
+
 
 features = ['0__change_quantiles__f_agg_"mean"__isabs_False__qh_0.8__ql_0.6',
             '0__change_quantiles__f_agg_"var"__isabs_False__qh_0.8__ql_0.6',
@@ -228,78 +270,92 @@ features = ['0__change_quantiles__f_agg_"mean"__isabs_False__qh_0.8__ql_0.6',
             '0__time_reversal_asymmetry_statistic__lag_2', '0__time_reversal_asymmetry_statistic__lag_3',
             '0__c3__lag_1', '0__c3__lag_2', '0__c3__lag_3', '0__maximum', '0__minimum']
 
-label_names = ["S","D","H","R"]
-
-def train_test_df(df, targets, targets_start_index, targets_end_index):
-    targets = targets[targets_start_index:targets_end_index].reset_index()
-    df[label_names] = targets[label_names]
-    return df
-
-# Processing first 20 min of raw scg signal and creating dataset with adaptive indexes and corresponding time row to extract features according to them.
-# Arguments are in order:start_hour,start_min,end_hour,end_min
-new_id_number_train,train_df = preprocess(raw_value, train_start_hour, train_start_minute, train_end_hour, train_end_minute)
-print("TRAIN DF LEN")
-print(len(train_df))
-print("TRAIN_DF ID NUMBER")
-print(new_id_number_train)
-
-# Processing last 7 minutes of raw scg signal to predict future parameters.
-new_id_number_test,test_df = preprocess(raw_value, test_start_hour, test_start_minute, test_end_hour, test_end_minute)
-print("TEST DF LEN")
-print(len(test_df))
-print("TEST_DF ID NUMBER")
-print(new_id_number_test)
 
 def label_modification_df(targets, targets_start_index, targets_end_index, bin_number):
-    targets = targets[targets_start_index:targets_end_index].reset_index()
+    targets = targets[targets_start_index:targets_start_index+targets_end_index].reset_index()
     S = []
     D = []
     H = []
     R = []
+    df = pd.DataFrame()
+    df['S'] = targets.S
+    df['D'] = targets.D
+    df['H'] = targets.H
+    df['R'] = targets.R
 
+    coef = 1
     for x in targets.S:
         for y in range(bin_number):
-            S.append(x)
+            S.append(x/coef)
 
     for x in targets.D:
         for y in range(bin_number):
-            D.append(x)
+            D.append(x/coef)
 
     for x in targets.H:
         for y in range(bin_number):
-            H.append(x)
+            H.append(x/coef)
 
     for x in targets.R:
         for y in range(bin_number):
-            R.append(x)
+            R.append(x/coef)
 
-
-
-    return S,D,H,R
+    return S, D, H, R,df
 
 
 def data_normalization(data):
-
     df = data
     df_mean = df.mean()
     df_std = df.std()
 
-    #Normalization
-    df = (df-df_mean)/df_std
+    # Normalization
+    df = (df - df_mean) / df_std
 
     return df
 
+
 # Processing first 20 min of raw scg signal and creating dataset with adaptive indexes and corresponding time row to extract features according to them.
 # Arguments are in order:start_hour,start_min,end_hour,end_min
-new_id_number_train, bin_length_train, train_df= preprocess(raw_value, train_start_hour, train_start_minute, train_end_hour, train_end_minute)
+new_id_number_train, bin_length_train,targets_startInx_train, train_df = preprocess(raw_value, train_start_hour, train_start_minute,
+                                                             train_end_hour, train_end_minute)
 
 # Processing last 7 minutes of raw scg signal to predict future parameters.
-new_id_number_test, bin_length_test, test_df = preprocess(raw_value, test_start_hour, test_start_minute, test_end_hour, test_end_minute)
+new_id_number_test, bin_length_test,targets_startInx_test, test_df = preprocess(raw_value, test_start_hour, test_start_minute, test_end_hour,
+                                                          test_end_minute)
 
-
-#Because of problems occuring while parallel processing i had to set n_jobs = 0,it calculates slower but works fine.
+# Because of problems occuring while parallel processing i had to set n_jobs = 0,it calculates slower but works fine.
 train_extracted_features = extract_features(train_df, column_id="id", column_sort="time",
-                                         default_fc_parameters=EfficientFCParameters(), n_jobs=0)
+                                           default_fc_parameters=EfficientFCParameters(), n_jobs=0)
 test_extracted_features = extract_features(test_df, column_id="id", column_sort="time",
                                           default_fc_parameters=EfficientFCParameters(), n_jobs=0)
 
+# train_extracted_features.to_csv('train_final_features.csv',index = False)
+#tt = pd.read_csv(r'C:\Users\Samane\Desktop\hw\20minFeature.xlsx')
+# test_extracted_features.to_csv('test_final_features.csv',index = False)
+
+train_features = train_extracted_features[features]
+train_features_norm = data_segmenation_normalization1(train_features)
+S, D, H, R, labels_train= label_modification_df(targets, targets_startInx_train, new_id_number_train, bin_length_train)
+
+train_df, val_df, test_df = data_shaping(train_features_norm, S, D, H, R)
+
+test_array = test_df.values
+test_array = np.expand_dims(test_array, axis=0)
+
+#test_features = pd.read_csv(r'C:\Users\Samane\Desktop\hw\7mintest.xlsx')[features]
+test_features = test_extracted_features[features]
+test_features_norm = data_normalization(test_features)
+S, D, H, R, labels_test= label_modification_df(targets, targets_startInx_test, new_id_number_test, bin_length_test)
+
+test_features_norm['S'] = np.array(S)
+test_features_norm["D"] = np.array(D)
+test_features_norm["H"] = np.array(H)
+test_features_norm["R"] = np.array(R)
+
+test_features_norm = test_features_norm.values
+test_features_norm = np.expand_dims(test_features_norm, axis=0)
+print("TEST FEATURE NORM SHAPE")
+print(test_features_norm.shape)
+
+
+# Data windowing for BiLSTM model
