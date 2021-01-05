@@ -483,3 +483,18 @@ def compile_and_fit(model, window, patience=2):
     predicted_values = model.predict(test_features_norm)
 
     return history, predicted_values
+
+val_performance = {}
+performance = {}
+
+lstm_model = tf.keras.models.Sequential([
+    # Shape [batch, time, features] => [batch, time, lstm_units]
+    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True,dropout = 0.1)),
+    # Shape => [batch, time, features]
+    tf.keras.layers.Dense(units=4, activation='relu')
+])
+
+history, predicted_values = compile_and_fit(lstm_model, wide_window)
+
+val_performance['BiLSTM Validation'] = lstm_model.evaluate(wide_window.val)
+performance['BiLSTM Performance'] = lstm_model.evaluate(wide_window.test, verbose=0)
