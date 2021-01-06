@@ -498,3 +498,35 @@ history, predicted_values = compile_and_fit(lstm_model, wide_window)
 
 val_performance['BiLSTM Validation'] = lstm_model.evaluate(wide_window.val)
 performance['BiLSTM Performance'] = lstm_model.evaluate(wide_window.test, verbose=0)
+
+print(val_performance)
+print(performance)
+
+predicted_values = predicted_values.reshape(predicted_values.shape[1],predicted_values.shape[2])
+predicted_values_avg4 = predicted_values.transpose().reshape(-1,4).mean(1).reshape(4,-1).transpose()
+
+print("Predicted S D H R after averaging on 4 prediction")
+print(np.round(predicted_values_avg4,0))
+print("labels parameters")
+print(predicted_values)
+
+
+from sklearn.metrics import mean_absolute_error
+
+mae = tf.keras.metrics.MeanAbsoluteError()
+mae = mae(labels_test,predicted_values_avg4)
+print("MAE")
+print(mae.numpy())
+
+
+#Getting time column slice from particular interval.
+datetime_series = pd.to_datetime(targets["Raw Time"][targets_startInx_test:targets_startInx_test + new_id_number_test].astype(str))
+datetime_index = pd.DatetimeIndex(datetime_series.values)
+
+pred_df = pd.DataFrame(predicted_values,columns = ["Pred_S", "Pred_D", "Pred_H", "Pred_R"])
+pred_real_df = pd.concat([pred_df,labels_test], axis=1, join='inner')
+pred_real_df = pred_real_df.set_index(datetime_index)
+
+pred_real_df.plot(subplots=True, layout=(2,4))
+plt.show()
+pred_real_df = pred_real_df.iloc[:1200,:4]
