@@ -63,10 +63,15 @@ Second Dataset results
 Third Dataset results
 
 # 1-4 References
+
 1-	Thomas Roczink & Robert Bosch.2018. Prediction of electrocardiography features points using seismocardiography data: a machine learning approach
+
 2-	Brian Solar – 2018. A Machine Learning Approach to Assess the Separation of Seismocardiographic Signals by Respiration - University of Central Florida
+
 3-	Xiao Jiang , Gui-Bin Bian and Zean Tian. 2019. Removal of Artifacts from EEG Signals: A Review
+
 4-	Dan Li, Xiaoyuan Ma, 2016, Use Moving Average Filter to Reduce Noises in Wearable PPG During Continuous Monitoring
+
 5-	Siddharth Kohli, Alex Casson, 2015, Removal of Transcranial a.c. Current Stimulation artifact from simultaneous EEG recordings by superposition of moving averages
 
 6-	Marco Di Rienzo, Emanuele Vaini & Prospero Lombardi,2017, An algorithm for the beat-tobeat
@@ -77,4 +82,5 @@ Third Dataset results
               EEG Monitoring
 
 8-	Kouhyr Tavakolian, 2013, Characterization and analysis of seismocardiography for estimation of hemodynamic parameters
+
 9-	https://tsfresh.readthedocs.io/en/latest
