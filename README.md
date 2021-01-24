@@ -31,7 +31,7 @@ Unlike traditional recurrent neural networks, LSTM supports time steps of arbitr
 By setting drop-out rate to 0.5, it also aimed to prevent overfitting. The resutl of traing data is showed in Fig.5. I used this approcah (70%,20%,10%) for dividing training data to traing data, test data and predicting data respectively to make our model and evaluate it. After that I tried new data(next 7min) to predict parameters. By making a model with 20min data as traing I got a score more than 95 (it would be 98 if we increase the size of train data).
 
 
-# 1-4 Refrences
+# 1-4 References
 1-	Thomas Roczink & Robert Bosch.2018. Prediction of electrocardiography features points using seismocardiography data: a machine learning approach
 2-	Brian Solar – 2018. A Machine Learning Approach to Assess the Separation of Seismocardiographic Signals by Respiration - University of Central Florida
 3-	Xiao Jiang , Gui-Bin Bian and Zean Tian. 2019. Removal of Artifacts from EEG Signals: A Review
